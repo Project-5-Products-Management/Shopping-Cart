@@ -1,8 +1,9 @@
 const { set, isValidObjectId } = require("mongoose");
 const userModel = require("../models/userModel");
 const validators = require("../validators/validator")
-
+const bcrypt = require('bcrypt')
 const jwt = require('JsonWebToken');
+const aws = require('../aws')
 
 
 //=====================================User Post API ====================================================
@@ -35,10 +36,11 @@ const createUser = async (req, res) => {
             return res.status(409).send({ status: false, message: `user with email : ${email} , already exists` })
         }
         //checking profile image  is provided by user or not
-        if (!profileImage) return res.status(400).send({ status: false, Message: " profile image is required" })
+        const pImg = req.files
+        if (!pImg) return res.status(400).send({ status: false, Message: " profile image is required" })
 
         //checking profile image link is valid or not
-       // if (!validators.isValidUrlImg(profileImage)) return res.status(400).send({ status: false, message: `${profileImage} is not valid aws s3 link` })
+        if (!validators.isValidImg(profileImage)) return res.status(400).send({ status: false, message: `${profileImage} is not valid aws s3 link` })
         //checking Phone number is provided by user or not
         if (!phone) return res.status(400).send({ status: false, message: " Phone number is required" })
 
@@ -85,7 +87,7 @@ const createUser = async (req, res) => {
         //checking pin code is valid or not?
         if (!validators.isValidPin(address.billing.pincode)) return res.status(400).send({ status: false, message: `${address.billing.pincode} is not valid 6 digit pincode` })
 
-        const profilePicture = await uploadFile(files[0])
+        const profilePicture = await aws.uploadFile(pImg[0])
         userData = {
             fname: fname,
             lname: lname,
@@ -120,36 +122,45 @@ const userLogin = async (req, res) => {
         const { email, password } = loginDetail;
 
         //checking login detail is provided by user or not?
-        if (!isValidReqBody(loginDetail)) return res.status(400).send({ status: false, message: "user detail is required to login" })
+        if (!validators.isValidReqBody(loginDetail)) return res.status(400).send({ status: false, message: "user detail is required to login" })
 
         //checking email is provided by user or not? , and it should not contain blank spaces
-        if (!email || !isValidValue(email)) return res.status(400).send({ status: false, message: " email is required to login" })
+        if (!email || !validators.isValidValue(email)) return res.status(400).send({ status: false, message: " email is required to login" })
 
         //checking email entered by user is Valid or not?
-        if (!isValidEmail(email)) return res.status(400).send({ status: false, message: `this email=> ${email} is not valid` })
+        if (!validators.isValidEmail(email)) return res.status(400).send({ status: false, message: `this email=> ${email} is not valid` })
 
         // checking user is registered with us or not?
         const findEmail = await userModel.findOne({ email: email })
         if (!findEmail) return res.status(400).send({ status: false, message: `this ${email} is not registered with us , you need to register first` })
 
         //checking ---is password entered by user or not?
-        if (!password || !isValidValue(password)) return res.status(400).send({ status: false, message: " password is required" })
+        if (!password || !validators.isValidValue(password)) return res.status(400).send({ status: false, message: " password is required" })
 
         //checkin-- is password valid or not
-        if (!isValidPL) return res.status(400).send({ status: false, message: " provide valid password lenght between 8-15 character long" })
+        if (!validators.isValidPL(password)) return res.status(400).send({ status: false, message: " provide valid password lenght between 8-15 character long" })
+
+
 
         // finding user with user detail
 
-        const findUser = await userModel.findOne({ email: email, password: password })
+        const findUser = await userModel.findOne({ email: email })
+
+        const dcryptPassword = await bcrypt.compare(password, findUser.password)
+        if (!dcryptPassword) {
+            return res.status(400).send({ status: false, message: "Password is incorrect" })
+        }
+
+
 
         //logging user with above detail
         const payLoad = { userId: findUser._id.toString(), iat: Date.now() }
         const secretKey = "Project-5-Group-29"
-        const optios = { expiresIn: "1h" }
-        const logging = jwt.sign(payLoad, secretKey, optios)
+        const options = { expiresIn: "24h" }
+        const logging = jwt.sign(payLoad, secretKey, options)
 
         //sending token to headers
-        res.setHeader("token-api-key", logging)
+        res.setHeader("x-api-key", logging)
 
         // sending logging in success response
         return res.status(201).send({ status: true, message: " user logged in successfully", data: findUser._id, token: logging })
@@ -178,14 +189,73 @@ const getUserProfileByID = async (req, res) => {
 const updateUserProfileByID = async (req, res) => {
     try {
         let updateDetail = req.body
-        let { fname, lname, email, profileImage, phone, password, address } = updateDetail
+        let { fname, lname, email, profileImage, phone, password  } = updateDetail
+        const address = JSON.parse(req.body.address)
         const userID = req.params.userId
+        if (!updateDetail) return res.status(400).send({ status: false, message: "updat detail required to update" })
         if (userID === undefined) return res.status(400).send({ status: false, message: "User ID is required" })
         if (!isValidObjectId(userID)) return res.status(400).send({ status: false, message: "user ID is not Valid" })
         const findUserProfile = await userModel.findById(userID)
         if (!findUserProfile) return res.status(404).send({ status: false, message: "user ID not found " })
-        if (!updateDetail) return res.status(400).send({ status: false, message: "updat detail required to update" })
-        const updateProfile = await userModel.findByIdAndUpdate({ _id: userID }, { $set: updateDetail }, { new: true })
+        if (password) {
+            let salt = await bcrypt.genSalt(10)
+            password = await bcrypt.hash(password, salt)
+        }
+        if (profileImage) {
+            let pImg = req.files
+            profileImage = await aws.uploadFile(pImg[0])
+        }
+
+
+         // checking street address is provide by user and it should not contain blank spaces without character
+        
+         if (!address.shipping.street || !validators.isValidValue(address.shipping.street)) return res.status(400).send({ status: false, message: "shipping street is required" })
+         // checking city is provided by user or not?
+         if (!address.shipping.city || !validators.isValidValue(address.shipping.city)) return res.status(400).send({ status: false, message: "shipping city is required" })
+ 
+         //checking city should not contain any numerals
+         if (!validators.isValidCity(address.shipping.city)) return res.status(400).send({ status: false, message: `${address.shipping.city} is not valid city` })
+         // checking pincode is provided by user or not?
+         if (!address.shipping.pincode || address.shipping.pincode == " ") return res.status(400).send({ status: false, message: "shipping pincode is required" })
+         //checking pin code is valid or not?
+         if (!validators.isValidPin(address.shipping.pincode)) return res.status(400).send({ status: false, message: `${address.shipping.pincode} is not valid 6 digit pincode` })
+        
+         // checking street address is provide by user and it should not contain blank spaces without character
+         if (!address.billing.street || !validators.isValidValue(address.billing.street)) return res.status(400).send({ status: false, message: "billing street is required" })
+ 
+         // checking city is provided by user or not?
+         if (!address.billing.city || !validators.isValidValue(address.billing.city)) return res.status(400).send({ status: false, message: "billing city is required" })
+ 
+         //checking city should not contain any numerals
+         if (!validators.isValidCity(address.billing.city)) return res.status(400).send({ status: false, message: `${address.billing.city} is not valid city` })
+ 
+         // checking pincode is provided by user or not?
+         if (!address.billing.pincode || address.billing.pincode == " ") return res.status(400).send({ status: false, message: "billing pincode is required" })
+ 
+         //checking pin code is valid or not?
+         if (!validators.isValidPin(address.billing.pincode)) return res.status(400).send({ status: false, message: `${address.billing.pincode} is not valid 6 digit pincode` })
+       
+         userData = {
+             fname: fname,
+             lname: lname,
+             profileImage: profileImage,
+             email: email,
+             phone: phone,
+             password: password,
+             address: address,
+ 
+         }
+
+
+
+         const updateProfile = await userModel.findByIdAndUpdate({ _id: userID }, {
+            userData
+        }, { new: true })
+
+        // const updateProfile = await userModel.findByIdAndUpdate({ _id: userID }, {
+        //     fname: fname, lname: lname, email: email,
+        //     profileImage: profileImage, phone: phone, password: password, address: address
+        // }, { new: true })
         res.status(200).send({ status: true, message: updateProfile })
 
     } catch (error) {

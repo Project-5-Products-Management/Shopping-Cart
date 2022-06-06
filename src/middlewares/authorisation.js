@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken')
 
 const authorisatin = async (req, res, next) => {
     try {
-        let token = req.headers["token-api-key"]
+        let token = req.headers["x-api-key"]
         //res.setHeaders["token-api-key"]
         if (!token) return res.status(400).json({ status: false, message: "Token Must be Present" })
         let decodeToken = jwt.verify(token, "Project-5-Group-29")

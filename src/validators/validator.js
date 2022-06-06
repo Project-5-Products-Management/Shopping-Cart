@@ -83,9 +83,18 @@ const isValidPin = (pincode) => {
     }
 }
 
+// profile pic validation 
 
+const isValidImg = async(img)=>{
+    imgType = (/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i)
+    if(imgType.test(img)){
+        return true
+    }else{
+        return false
+    }
+}
 
 module.exports = {
     isValidName, isValidValue, isValidReqBody, isValidEmail, isValidUrlImg, isvalidIndian, isValidPL, isValidCity,
-    isValidPin 
+    isValidPin ,isValidImg
 }
