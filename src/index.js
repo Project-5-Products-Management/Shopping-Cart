@@ -4,7 +4,13 @@ const route = require('./routes/route.js');
 const  mongoose  = require('mongoose');
 const moment = require("moment")
 
+const multer= require("multer");
+
+
+
 const app = express();
+
+app.use( multer().any())
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
