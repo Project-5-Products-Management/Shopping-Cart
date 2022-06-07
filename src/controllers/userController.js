@@ -14,7 +14,7 @@ const createUser = async (req, res) => {
         let userData = req.body;
         let { fname, lname, email, profileImage, phone, password } = userData;
 
-        const address = JSON.parse(req.body.address)
+        let address = JSON.parse(req.body.address)
 
         //checking requested Body
         if (!validators.isValidReqBody(req.body)) return res.status(400).send({ status: false, message: ` invalid body Parameters requested--<br> user detail is required ?` })
@@ -61,32 +61,35 @@ const createUser = async (req, res) => {
         password = await bcrypt.hash(password, salt)
 
         // checking street address is provide by user and it should not contain blank spaces without character
-        if (!address.shipping.street || !validators.isValidValue(address.shipping.street)) return res.status(400).send({ status: false, message: "shipping street is required" })
-        // checking city is provided by user or not?
-        if (!address.shipping.city || !validators.isValidValue(address.shipping.city)) return res.status(400).send({ status: false, message: "shipping city is required" })
+        if (address) {
+            if (address.shipping) {
+                if (!validators.isValidValue(address.shipping.street)) return res.status(400).send({ status: false, message: "shipping street is required" })
+                // checking city is provided by user or not?
+                if (!address.shipping.city || !validators.isValidValue(address.shipping.city)) return res.status(400).send({ status: false, message: "shipping city is required" })
 
-        //checking city should not contain any numerals
-        if (!validators.isValidCity(address.shipping.city)) return res.status(400).send({ status: false, message: `${address.shipping.city} is not valid city` })
-        // checking pincode is provided by user or not?
-        if (!address.shipping.pincode || address.shipping.pincode == " ") return res.status(400).send({ status: false, message: "shipping pincode is required" })
-        //checking pin code is valid or not?
-        if (!validators.isValidPin(address.shipping.pincode)) return res.status(400).send({ status: false, message: `${address.shipping.pincode} is not valid 6 digit pincode` })
+                //checking city should not contain any numerals
+                if (!validators.isValidCity(address.shipping.city)) return res.status(400).send({ status: false, message: `${address.shipping.city} is not valid city` })
+                // checking pincode is provided by user or not?
+                if (!address.shipping.pincode || address.shipping.pincode == " ") return res.status(400).send({ status: false, message: "shipping pincode is required" })
+                //checking pin code is valid or not?
+                if (!validators.isValidPin(address.shipping.pincode)) return res.status(400).send({ status: false, message: `${address.shipping.pincode} is not valid 6 digit pincode` })
+            } if (address.billing) {
+                // checking street address is provide by user and it should not contain blank spaces without character
+                if (!address.billing.street || !validators.isValidValue(address.billing.street)) return res.status(400).send({ status: false, message: "billing street is required" })
 
-        // checking street address is provide by user and it should not contain blank spaces without character
-        if (!address.billing.street || !validators.isValidValue(address.billing.street)) return res.status(400).send({ status: false, message: "billing street is required" })
+                // checking city is provided by user or not?
+                if (!address.billing.city || !validators.isValidValue(address.billing.city)) return res.status(400).send({ status: false, message: "billing city is required" })
 
-        // checking city is provided by user or not?
-        if (!address.billing.city || !validators.isValidValue(address.billing.city)) return res.status(400).send({ status: false, message: "billing city is required" })
+                //checking city should not contain any numerals
+                if (!validators.isValidCity(address.billing.city)) return res.status(400).send({ status: false, message: `${address.billing.city} is not valid city` })
 
-        //checking city should not contain any numerals
-        if (!validators.isValidCity(address.billing.city)) return res.status(400).send({ status: false, message: `${address.billing.city} is not valid city` })
+                // checking pincode is provided by user or not?
+                if (!address.billing.pincode || address.billing.pincode == " ") return res.status(400).send({ status: false, message: "billing pincode is required" })
 
-        // checking pincode is provided by user or not?
-        if (!address.billing.pincode || address.billing.pincode == " ") return res.status(400).send({ status: false, message: "billing pincode is required" })
-
-        //checking pin code is valid or not?
-        if (!validators.isValidPin(address.billing.pincode)) return res.status(400).send({ status: false, message: `${address.billing.pincode} is not valid 6 digit pincode` })
-
+                //checking pin code is valid or not?
+                if (!validators.isValidPin(address.billing.pincode)) return res.status(400).send({ status: false, message: `${address.billing.pincode} is not valid 6 digit pincode` })
+            }
+        }
         const profilePicture = await aws.uploadFile(pImg[0])
         userData = {
             fname: fname,
@@ -189,77 +192,83 @@ const getUserProfileByID = async (req, res) => {
 const updateUserProfileByID = async (req, res) => {
     try {
         let updateDetail = req.body
-        let { fname, lname, email, profileImage, phone, password  } = updateDetail
-        const address = JSON.parse(req.body.address)
+        // destructuring user data
+        let { fname, lname, email, profileImage, phone, password, address } = updateDetail
+
+        // fixing unexpected token u at position 0 for address 
+        if (address != null) { address = JSON.parse(address) }
+
         const userID = req.params.userId
+        // checking input provided by user or not?
         if (!updateDetail) return res.status(400).send({ status: false, message: "updat detail required to update" })
+
+        // checking user id provided by user or not?
         if (userID === undefined) return res.status(400).send({ status: false, message: "User ID is required" })
+
+        // validating user id
         if (!isValidObjectId(userID)) return res.status(400).send({ status: false, message: "user ID is not Valid" })
+
+        // checking user exists in db or not?
         const findUserProfile = await userModel.findById(userID)
         if (!findUserProfile) return res.status(404).send({ status: false, message: "user ID not found " })
-        if (password) {
+
+        // checking valid password entered by user or not?
+        if (password !== null) {
+            if (validators.isValidPL(password)) return res.status(404).send({ status: false, message: "password is not valid " })
             let salt = await bcrypt.genSalt(10)
             password = await bcrypt.hash(password, salt)
         }
-        if (profileImage) {
+        // updating profile pic
+        if (profileImage !== null) {
             let pImg = req.files
             profileImage = await aws.uploadFile(pImg[0])
         }
 
 
-         // checking street address is provide by user and it should not contain blank spaces without character
-        
-         if (!address.shipping.street || !validators.isValidValue(address.shipping.street)) return res.status(400).send({ status: false, message: "shipping street is required" })
-         // checking city is provided by user or not?
-         if (!address.shipping.city || !validators.isValidValue(address.shipping.city)) return res.status(400).send({ status: false, message: "shipping city is required" })
- 
-         //checking city should not contain any numerals
-         if (!validators.isValidCity(address.shipping.city)) return res.status(400).send({ status: false, message: `${address.shipping.city} is not valid city` })
-         // checking pincode is provided by user or not?
-         if (!address.shipping.pincode || address.shipping.pincode == " ") return res.status(400).send({ status: false, message: "shipping pincode is required" })
-         //checking pin code is valid or not?
-         if (!validators.isValidPin(address.shipping.pincode)) return res.status(400).send({ status: false, message: `${address.shipping.pincode} is not valid 6 digit pincode` })
-        
-         // checking street address is provide by user and it should not contain blank spaces without character
-         if (!address.billing.street || !validators.isValidValue(address.billing.street)) return res.status(400).send({ status: false, message: "billing street is required" })
- 
-         // checking city is provided by user or not?
-         if (!address.billing.city || !validators.isValidValue(address.billing.city)) return res.status(400).send({ status: false, message: "billing city is required" })
- 
-         //checking city should not contain any numerals
-         if (!validators.isValidCity(address.billing.city)) return res.status(400).send({ status: false, message: `${address.billing.city} is not valid city` })
- 
-         // checking pincode is provided by user or not?
-         if (!address.billing.pincode || address.billing.pincode == " ") return res.status(400).send({ status: false, message: "billing pincode is required" })
- 
-         //checking pin code is valid or not?
-         if (!validators.isValidPin(address.billing.pincode)) return res.status(400).send({ status: false, message: `${address.billing.pincode} is not valid 6 digit pincode` })
-       
-         userData = {
-             fname: fname,
-             lname: lname,
-             profileImage: profileImage,
-             email: email,
-             phone: phone,
-             password: password,
-             address: address,
- 
-         }
+        // checking street address is provide by user and it should not contain blank spaces without character
+        if (address) {
+            if (!address.shipping.street || !validators.isValidValue(address.shipping.street)) return res.status(400).send({ status: false, message: "shipping street is required" })
 
+            // checking city is provided by user or not?
+            if (!address.shipping.city || !validators.isValidValue(address.shipping.city)) return res.status(400).send({ status: false, message: "shipping city is required" })
 
+            //checking city should not contain any numerals
+            if (!validators.isValidCity(address.shipping.city)) return res.status(400).send({ status: false, message: `${address.shipping.city} is not valid city` })
 
-         const updateProfile = await userModel.findByIdAndUpdate({ _id: userID }, {
-            userData
+            // checking pincode is provided by user or not?
+            if (!address.shipping.pincode || address.shipping.pincode == " ") return res.status(400).send({ status: false, message: "shipping pincode is required" })
+
+            //checking pin code is valid or not?
+            if (!validators.isValidPin(address.shipping.pincode)) return res.status(400).send({ status: false, message: `${address.shipping.pincode} is not valid 6 digit pincode` })
+
+            // checking street address is provide by user and it should not contain blank spaces without character
+            if (!address.billing.street || !validators.isValidValue(address.billing.street)) return res.status(400).send({ status: false, message: "billing street is required" })
+
+            // checking city is provided by user or not?
+            if (!address.billing.city || !validators.isValidValue(address.billing.city)) return res.status(400).send({ status: false, message: "billing city is required" })
+
+            //checking city should not contain any numerals
+            if (!validators.isValidCity(address.billing.city)) return res.status(400).send({ status: false, message: `${address.billing.city} is not valid city` })
+
+            // checking pincode is provided by user or not?
+            if (!address.billing.pincode || address.billing.pincode == " ") return res.status(400).send({ status: false, message: "billing pincode is required" })
+
+            //checking pin code is valid or not?
+            if (!validators.isValidPin(address.billing.pincode)) return res.status(400).send({ status: false, message: `${address.billing.pincode} is not valid 6 digit pincode` })
+        }
+
+        // updating user data
+
+        const updateProfile = await userModel.findByIdAndUpdate({ _id: userID }, {
+            fname: fname, lname: lname, email: email,
+            profileImage: profileImage, phone: phone, password: password, address: address
         }, { new: true })
 
-        // const updateProfile = await userModel.findByIdAndUpdate({ _id: userID }, {
-        //     fname: fname, lname: lname, email: email,
-        //     profileImage: profileImage, phone: phone, password: password, address: address
-        // }, { new: true })
-        res.status(200).send({ status: true, message: updateProfile })
+        res.status(200).json({ status: true, message: updateProfile })
 
+        // sending exicution errors to  catch
     } catch (error) {
-        res.status(500).send({ status: false, message: error.message })
+        res.status(500).json({ status: false, message: error.message })
     }
 }
 // making following keys as public so we can use it in any folder
