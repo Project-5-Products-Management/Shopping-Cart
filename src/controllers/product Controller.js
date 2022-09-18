@@ -18,18 +18,18 @@ const createProduct = async(req, res) => {
         const files = req.files
             //===============================================VALIDATIONS=====================================================================================
 
-        if (!isValidfiles(files)) {
+        if (!validators.isValidImg(files)) {
             return res.status(400).send({ status: false, message: "Please Provide Profile Pictures" })
         }
 
-        if (!validators.isValidRequestBody(data)) {
+        if (!validators.isValidReqBody(data)) {
 
             return res.status(400).send({ status: false, message: "Please Provide DATA" })
         }
 
         //================================================TITLE VALIDATION====================================================================================
 
-        if (!validators.isValidField(title)) {
+        if (!validators.isValidValue(title)) {
 
             return res.status(400).send({ status: false, message: "Provde title field" })
         }
@@ -182,7 +182,7 @@ const getproduct = async(req, res) => {
     try {
         const queryParams = req.query
         let { title, size, priceSort } = queryParams
-        if (!isValidRequestBody(queryParams)) {
+        if (!validators.isValidReqBody(queryParams)) {
             // return all products that are not deleted and sort them in ascending
             let products = await productModel.find({ isDeleted: false }).sort({ "price": 1 })
             return res.status(200).send({ status: true, msg: 'all book list', data: products })
@@ -234,7 +234,7 @@ const updateProduct = async(req, res) => {
         const data = JSON.parse(req.body.data)
         let ID = req.params.productId
         const files = req.files
-        if (!(isValidRequestBody(data))) {
+        if (!(validators.isValidReqBody(data))) {
             return res.status(400).send({ status: false, msg: "please enter data to update" })
         }
         //================================================VALIDATION====================================================================================
@@ -310,7 +310,7 @@ const deleteProductById = async function(req, res) {
     try {
         let productId = req.params.productId
 
-        if (!validators.isValidField(productId)) {
+        if (!validators.isValidValue(productId)) {
 
             res.status(400).send({ status: false, message: "productId must pe present" })
         }

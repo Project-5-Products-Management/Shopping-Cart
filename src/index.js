@@ -4,11 +4,17 @@ const route = require('./routes/route.js');
 const  mongoose  = require('mongoose');
 const moment = require("moment")
 
+
+/* Multer is a node. js middleware for handling multipart/form-data , which is primarily used for uploading files.
+ NOTE: Multer will not process any form which is not multipart ( multipart/form-data ).*/
+
+ 
 const multer= require("multer");
 
+/* app.use(middleware) is a Global middleware which can be accessed by all routes in the application hence 
+its name “Global”) and specific middleware (This is a middleware which applies to just a specific route)  */
 
-
-const app = express();
+const app = express(); 
 
 app.use( multer().any())
 

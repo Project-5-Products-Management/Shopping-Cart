@@ -1,23 +1,20 @@
-const jwt = require('jsonwebtoken')
+const { isValidObjectId } = require("mongoose")
 
-const authorisatin = async (req, res, next) => {
+
+const authorization = function (req, res, next) {
     try {
-        let token = req.headers["x-api-key"]
-        //res.setHeaders["token-api-key"]
-        if (!token) return res.status(400).json({ status: false, message: "Token Must be Present" })
-        let decodeToken = jwt.verify(token, "Project-5-Group-29")
-        let extractedId = decodeToken._id
-        let userId = req.params
-        if (!extractedId == userId) return res.status(400).json({ status: false, message: "you are not authorised " })
-        let expiredToken = decodeToken.expiredToken
-        let timesNow = Math.floor(Date.now()/1000)
-        if(expiredToken <= timesNow ) return res.status(400).json({ status: false, message: "token has been expired , please re-login " })
+        let userId = req.params.userId
+        if (!isValidObjectId(userId))
+            return res.status(400).send({ status: false, message: "userId is not valid.... Please enter valid user id" })
+
+        if (userId !== req.decodedToken.userId)
+            return res.status(400).send({ status: false, message: "Unauthorized Access!!" })
+
         next()
 
-
-
-    } catch (error) {
-        res.status(500).send({ status: false, message: error.message })
+    } catch (err) {
+        return res.status(500).send({ error: err.message })
     }
 }
-module.exports.authorisatin = authorisatin
+
+module.exports = { authorization }

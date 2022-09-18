@@ -1,5 +1,10 @@
-const mongoose = require("mongoose")
+/*Mongoose is a JavaScript object-oriented programming library that creates a connection between MongoDB and the Node.js
+ -JavaScript runtime environment. or Mongoose is an Object Data Modeling (ODM) library for MongoDB and Node. js.
+  It manages relationships between data, provides schema validation, and is used to translate between objects in code
+   and the representation of those objects in MongoDB */
 
+
+const mongoose = require("mongoose") 
 
 // Validation of request Body
 const isValidReqBody = (reqBody) => {
@@ -85,16 +90,16 @@ const isValidPin = (pincode) => {
 
 // profile pic validation 
 
-const isValidImg = async(img)=>{
+const isValidImg = async (img) => {
     imgType = (/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i)
-    if(imgType.test(img)){
+    if (imgType.test(img)) {
         return true
-    }else{
+    } else {
         return false
     }
 }
 
 module.exports = {
     isValidName, isValidValue, isValidReqBody, isValidEmail, isValidUrlImg, isvalidIndian, isValidPL, isValidCity,
-    isValidPin ,isValidImg
+    isValidPin, isValidImg
 }
