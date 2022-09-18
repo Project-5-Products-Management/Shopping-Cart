@@ -29,25 +29,25 @@ const createProduct = async(req, res) => {
 
         //================================================TITLE VALIDATION====================================================================================
 
-        if (!validators.isValidValue(title)) {
+        if (!validators.isValidAN(title)) {
 
             return res.status(400).send({ status: false, message: "Provde title field" })
         }
         //================================================DESCRIPTION VALIDATION====================================================================================
 
 
-        if (!validators.isValidField(description)) {
+        if (!validators.isValidAN(description)) {
 
             return res.status(400).send({ status: false, message: "Provide Description field" })
         }
 
         //================================================CURRENCYID VALIDATION====================================================================================
 
+    //   console.log(currencyId)
+    //     if (validators.isValidCurrencyId(currencyId)) {
 
-        if (!validators.isValidField(currencyId)) {
-
-            return res.status(400).send({ status: false, message: "Provide currencyId field" })
-        }
+    //         return res.status(400).send({ status: false, message: "Provide currencyId field" })
+    //     }
 
         //================================================PRICE VALIDATION====================================================================================
 

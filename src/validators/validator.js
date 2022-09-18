@@ -15,9 +15,14 @@ const isValidReqBody = (reqBody) => {
 // validating types of values`
 
 const isValidValue = (value) => {
-    if (typeof value == " " || typeof value == null) return false
-    if (typeof value == 'String' || value.trim().length == 0) return false
-    if (typeof value === 'Number' || value.toString().trim().length === 0) return false
+
+    if (typeof value === 'undefined' || value === null) return false
+    return true
+}
+
+const isValidNum = (value) => {
+    if (typeof value === 'undefined' || value === null) return false
+    if (typeof value === 'number' && value.trim().length === 0) return false
     return true
 }
 
@@ -99,7 +104,18 @@ const isValidImg = async (img) => {
     }
 }
 
+const isValidCurrencyId = (value)=>{
+    if (typeof value === 'string' || value.trim().length === 0 || value !== "INR") return false
+    return true
+}
+
+const isValidAN = (value)=>{
+    let regex = /^[a-zA-Z0-9_]*$/
+    if(regex.test(value)){
+        return true
+    }else return false
+}
 module.exports = {
     isValidName, isValidValue, isValidReqBody, isValidEmail, isValidUrlImg, isvalidIndian, isValidPL, isValidCity,
-    isValidPin, isValidImg
+    isValidPin, isValidImg,isValidNum,isValidCurrencyId, isValidAN
 }
